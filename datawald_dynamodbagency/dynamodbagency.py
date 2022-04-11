@@ -5,6 +5,7 @@ from __future__ import print_function
 __author__ = "bibow"
 
 import uuid, traceback
+from datetime import datetime
 from datawald_agency import Agency
 from datawald_connector import DatawaldConnector
 from dynamodb_connector import DynamoDBConnector
@@ -84,13 +85,30 @@ class DynamoDBAgency(Agency):
             value = entity.get("tx_type_src_id").split("-")[1]
             if entity["data"].get(key) and entity["data"].get(key) != value:
                 value = f"{entity['data'].get(key)}-{value}"
+
+            if isinstance(entity.get("created_at"), str):
+                created_at = datetime.strptime(
+                    entity.get("created_at"), datetime_format
+                )
+                created_at = created_at.strftime(datetime_format)
+            else:
+                created_at = entity.get("created_at").strftime(datetime_format)
+
+            if isinstance(entity.get("updated_at"), str):
+                updated_at = datetime.strptime(
+                    entity.get("updated_at"), datetime_format
+                )
+                updated_at = updated_at.strftime(datetime_format)
+            else:
+                updated_at = entity.get("updated_at").strftime(datetime_format)
+
             _entity = {
                 "id": entity.get("tgt_id"),
                 "source": entity.get("source"),
                 key: value,
                 "data": Utility.json_loads(Utility.json_dumps(entity.get("data"))),
-                "created_at": entity.get("created_at").strftime(datetime_format),
-                "updated_at": entity.get("updated_at").strftime(datetime_format),
+                "created_at": created_at,
+                "updated_at": updated_at,
             }
             if entity.get("history"):
                 _entity.update({"history": entity.pop("history")})
