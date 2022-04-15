@@ -30,8 +30,8 @@ class DynamoDBAgency(Agency):
         key = self.setting["tgt_metadata"][entity.get("source")][tx_type]["key"]
 
         new_entity = dict(entity, **{"tgt_id": str(uuid.uuid1().int >> 64)})
-        value = entity.get("tx_type_src_id").split("-")[1]
-        if entity["data"].get(key):
+        value = entity.get("tx_type_src_id").strip(f"{tx_type}-")
+        if entity["data"].get(key) and entity["data"].get(key) != value:
             value = f"{entity['data'].get(key)}-{value}"
 
         item = self.dynamodbconnector.get_item(
@@ -82,7 +82,7 @@ class DynamoDBAgency(Agency):
         ]
         key = self.setting["tgt_metadata"][entity.get("source")][tx_type]["key"]
         try:
-            value = entity.get("tx_type_src_id").split("-")[1]
+            value = entity.get("tx_type_src_id").strip(f"{tx_type}-")
             if entity["data"].get(key) and entity["data"].get(key) != value:
                 value = f"{entity['data'].get(key)}-{value}"
 
