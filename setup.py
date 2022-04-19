@@ -16,7 +16,7 @@ setup(
     include_package_data=True,
     zip_safe=False,
     platforms="Linux",
-    install_requires=["DataWald-Agency", "DynamoDB-Connector"],
+    install_requires=["DataWald-Agency", "DataWald-Connector", "DynamoDB-Connector"],
     classifiers=[
         "License :: OSI Approved :: MIT License",
         "Programming Language :: Python",
