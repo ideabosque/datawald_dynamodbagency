@@ -71,9 +71,7 @@ class DynamoDBAgency(Agency):
                     ]
                     if len(lots) > 0:
                         history.update({item["updated_at"]: lots})
-                        new_entity.update(
-                            {"history": history}
-                        )
+                        new_entity.update({"history": history})
         return new_entity
 
     def get_lot_history(self, lot, lots):
@@ -172,3 +170,67 @@ class DynamoDBAgency(Agency):
         for asset in assets:
             self.insert_update_entity(asset)
         return assets
+
+    def stream_handle(self, **params):
+        kwargs = {}
+        entities = []
+        for record in params.get("records"):
+            if record["eventName"] not in ("INSERT", "MODIFY"):
+                continue
+
+            entity = record["dynamodb"]["NewImage"]
+            table_name = record["eventSourceARN"].split("/")[1]
+
+            result = list(
+                filter(
+                    lambda x: x["table_name"] == table_name,
+                    [
+                        dict(v, **{"tx_type": k})
+                        for k, v in self.setting["tgt_metadata"][
+                            entity.get("source")
+                        ].items()
+                    ],
+                )
+            )
+            assert (
+                len(result) > 0
+            ), f"Cannot find the tx_type by the table_name ({table_name})!!!"
+
+            if len(kwargs.keys()) == 0:
+                assert (
+                    result[0].get("stream_target") is not None
+                ), "There is no stream_target!!!"
+                kwargs = {
+                    "source": entity.get("source"),
+                    "target": result[0]["stream_target"],
+                    "tx_type": result[0]["tx_type"],
+                }
+
+            key = result[0]["key"]
+            src_id = entity[key]
+            if src_id != entity["data"].get(key):
+                src_id.replace(f"{entity['data'].get(key)}-", "")
+
+            entities.append(
+                {
+                    "src_id": src_id,
+                    "data": entity["data"],
+                    "created_at": entity["created_at"],
+                    "updated_at": entity["updated_at"],
+                }
+            )
+
+        if len(entities) == 0:
+            return
+
+        kwargs.update({"entities": entities})
+        self.retrieve_entities_from_source(**kwargs)
+
+    def tx_transactions_src(self, **kwargs):
+        return kwargs.pop("entities")
+
+    def tx_assets_src(self, **kwargs):
+        return kwargs.pop("entities")
+
+    def tx_persons_src(self, **kwargs):
+        return kwargs.pop("entities")
