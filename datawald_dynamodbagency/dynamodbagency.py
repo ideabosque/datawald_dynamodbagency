@@ -206,18 +206,13 @@ class DynamoDBAgency(Agency):
                     "tx_type": result[0]["tx_type"],
                 }
 
-            key = result[0]["key"]
-            src_id = entity[key]
-            if src_id != entity["data"].get(key):
-                src_id.replace(f"{entity['data'].get(key)}-", "")
-
             entities.append(
-                {
-                    "src_id": src_id,
-                    "data": entity["data"],
-                    "created_at": entity["created_at"],
-                    "updated_at": entity["updated_at"],
-                }
+                entity["data"].update(
+                    {
+                        "created_at": entity["created_at"],
+                        "updated_at": entity["updated_at"],
+                    }
+                )
             )
 
         if len(entities) == 0:
@@ -230,7 +225,46 @@ class DynamoDBAgency(Agency):
         return kwargs.pop("entities")
 
     def tx_assets_src(self, **kwargs):
-        return kwargs.pop("entities")
+        try:
+            if kwargs.get("tx_type") == "product":
+                kwargs.update({"metadatas": self.get_product_metadatas(**kwargs)})
+
+            assets = list(
+                map(
+                    lambda raw_asset: self.tx_asset_src(raw_asset, **kwargs),
+                    kwargs.pop("entities"),
+                )
+            )
+            return assets
+        except Exception:
+            self.logger.info(kwargs)
+            log = traceback.format_exc()
+            self.logger.exception(log)
+            raise
+
+    def tx_asset_src(self, raw_asset, **kwargs):
+        tx_type = kwargs.get("tx_type")
+        asset = {
+            "src_id": raw_asset[self.setting["src_metadata"][tx_type]["src_id"]],
+            "created_at": raw_asset[
+                self.setting["src_metadata"][tx_type]["created_at"]
+            ],
+            "updated_at": raw_asset[
+                self.setting["src_metadata"][tx_type]["updated_at"]
+            ],
+        }
+        try:
+            if tx_type == "product":
+                data = self.transform_data(raw_asset, kwargs.get("metadatas"))
+                asset.update({"data": data})
+            else:
+                raise Exception(f"{kwargs.get('tx_type')} is not supported.")
+
+        except Exception:
+            log = traceback.format_exc()
+            asset.update({"tx_status": "F", "tx_note": log})
+            self.logger.exception(log)
+        return asset
 
     def tx_persons_src(self, **kwargs):
         return kwargs.pop("entities")
