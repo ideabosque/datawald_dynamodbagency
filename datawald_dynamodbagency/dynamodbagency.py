@@ -186,6 +186,7 @@ class DynamoDBAgency(Agency):
             entity = self.ddb_deserialize(record["dynamodb"]["NewImage"])
             table_name = record["eventSourceARN"].split("/")[1]
 
+            self.logger.info(entity)
             result = list(
                 filter(
                     lambda x: x["table_name"] == table_name,
