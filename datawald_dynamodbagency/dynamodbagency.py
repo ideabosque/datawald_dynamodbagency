@@ -1,6 +1,7 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 from __future__ import print_function
+from time import sleep
 
 __author__ = "bibow"
 
@@ -11,6 +12,7 @@ from datawald_agency import Agency
 from datawald_connector import DatawaldConnector
 from dynamodb_connector import DynamoDBConnector
 from silvaengine_utility import Utility
+from boto3.dynamodb.types import TypeDeserializer
 
 datetime_format = "%Y-%m-%dT%H:%M:%S%z"
 
@@ -171,6 +173,9 @@ class DynamoDBAgency(Agency):
             self.insert_update_entity(asset)
         return assets
 
+    def ddb_deserialize(self, r, type_deserializer=TypeDeserializer()):
+        return type_deserializer.deserialize({"M": r})
+
     def stream_handle(self, **params):
         kwargs = {}
         entities = []
@@ -178,7 +183,7 @@ class DynamoDBAgency(Agency):
             if record["eventName"] not in ("INSERT", "MODIFY"):
                 continue
 
-            entity = record["dynamodb"]["NewImage"]
+            entity = self.ddb_deserialize(record["dynamodb"]["NewImage"])
             table_name = record["eventSourceARN"].split("/")[1]
 
             result = list(
@@ -206,14 +211,13 @@ class DynamoDBAgency(Agency):
                     "tx_type": result[0]["tx_type"],
                 }
 
-            entities.append(
-                entity["data"].update(
-                    {
-                        "created_at": entity["created_at"],
-                        "updated_at": entity["updated_at"],
-                    }
-                )
+            entity["data"].update(
+                {
+                    "created_at": entity["created_at"],
+                    "updated_at": entity["updated_at"],
+                }
             )
+            entities.append(entity)
 
         if len(entities) == 0:
             return
@@ -255,7 +259,7 @@ class DynamoDBAgency(Agency):
         }
         try:
             if tx_type == "product":
-                data = self.transform_data(raw_asset, kwargs.get("metadatas"))
+                data = self.transform_data(raw_asset["data"], kwargs.get("metadatas"))
                 asset.update({"data": data})
             else:
                 raise Exception(f"{kwargs.get('tx_type')} is not supported.")
