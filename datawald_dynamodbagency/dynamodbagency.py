@@ -202,10 +202,10 @@ class DynamoDBAgency(Agency):
                 len(result) > 0
             ), f"Cannot find the tx_type by the table_name ({table_name})!!!"
 
+            if result[0].get("stream_target") is None:
+                continue
+
             if len(kwargs.keys()) == 0:
-                assert (
-                    result[0].get("stream_target") is not None
-                ), "There is no stream_target!!!"
                 kwargs = {
                     "source": entity.get("source"),
                     "target": result[0]["stream_target"],
