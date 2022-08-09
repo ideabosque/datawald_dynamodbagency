@@ -226,50 +226,70 @@ class DynamoDBAgency(Agency):
             }
         )
 
-    def tx_transactions_src(self, **kwargs):
-        return kwargs.pop("entities")
-
-    def tx_assets_src(self, **kwargs):
+    def tx_entities_src(self, **kwargs):
         try:
-            if kwargs.get("tx_type") == "product":
-                kwargs.update({"metadatas": self.get_product_metadatas(**kwargs)})
-
-            assets = list(
+            raw_entities = kwargs.pop("entities")
+            entities = list(
                 map(
-                    lambda raw_asset: self.tx_asset_src(raw_asset, **kwargs),
-                    kwargs.pop("entities"),
+                    lambda raw_entity: self.tx_entity_src(raw_entity, **kwargs),
+                    raw_entities,
                 )
             )
-            return assets
+
+            return entities
         except Exception:
-            self.logger.info(kwargs)
             log = traceback.format_exc()
             self.logger.exception(log)
             raise
 
-    def tx_asset_src(self, raw_asset, **kwargs):
+    def tx_entity_src(self, raw_entity, **kwargs):
         tx_type = kwargs.get("tx_type")
-        asset = {
-            "src_id": raw_asset[self.setting["src_metadata"][tx_type]["src_id"]],
-            "created_at": raw_asset[
-                self.setting["src_metadata"][tx_type]["created_at"]
+        target = kwargs.get("target")
+        entity = {
+            "src_id": raw_entity[
+                self.setting["src_metadata"][target][tx_type]["src_id"]
             ],
-            "updated_at": raw_asset[
-                self.setting["src_metadata"][tx_type]["updated_at"]
+            "created_at": raw_entity[
+                self.setting["src_metadata"][target][tx_type]["created_at"]
+            ],
+            "updated_at": raw_entity[
+                self.setting["src_metadata"][target][tx_type]["updated_at"]
             ],
         }
+
+        if type(entity["created_at"]) == str:
+            entity["created_at"] = datetime.strptime(
+                entity["created_at"], "%Y-%m-%dT%H:%M:%S%z"
+            )
+        if type(entity["updated_at"]) == str:
+            entity["updated_at"] = datetime.strptime(
+                entity["updated_at"], "%Y-%m-%dT%H:%M:%S%z"
+            )
+
         try:
             if tx_type == "product":
-                data = self.transform_data(raw_asset["data"], kwargs.get("metadatas"))
-                asset.update({"data": data})
+                metadatas = self.get_product_metadatas(**kwargs)
+                entity.update({"data": self.transform_data(raw_entity, metadatas)})
             else:
-                raise Exception(f"{kwargs.get('tx_type')} is not supported.")
-
+                entity.update(
+                    {
+                        "data": self.transform_data(
+                            raw_entity, self.map[target].get(tx_type)
+                        )
+                    }
+                )
         except Exception:
             log = traceback.format_exc()
-            asset.update({"tx_status": "F", "tx_note": log})
+            entity.update({"tx_status": "F", "tx_note": log})
             self.logger.exception(log)
-        return asset
+
+        return entity
+
+    def tx_transactions_src(self, **kwargs):
+        return self.tx_entities_src(**kwargs)
 
     def tx_persons_src(self, **kwargs):
-        return kwargs.pop("entities")
+        return self.tx_entities_src(**kwargs)
+
+    def tx_assets_src(self, **kwargs):
+        return self.tx_entities_src(**kwargs)
