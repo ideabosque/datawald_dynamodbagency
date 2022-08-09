@@ -177,8 +177,8 @@ class DynamoDBAgency(Agency):
         return type_deserializer.deserialize({"M": r})
 
     def stream_handle(self, **params):
-        kwargs = {}
         entities = []
+        table_name = None
         for record in params.get("records"):
             if record["eventName"] not in ("INSERT", "MODIFY"):
                 continue
@@ -187,30 +187,6 @@ class DynamoDBAgency(Agency):
             table_name = record["eventSourceARN"].split("/")[1]
 
             self.logger.info(entity)
-            result = list(
-                filter(
-                    lambda x: x["table_name"] == table_name,
-                    [
-                        dict(v, **{"tx_type": k})
-                        for k, v in self.setting["tgt_metadata"][
-                            entity.get("source")
-                        ].items()
-                    ],
-                )
-            )
-            assert (
-                len(result) > 0
-            ), f"Cannot find the tx_type by the table_name ({table_name})!!!"
-
-            if result[0].get("stream_target") is None:
-                continue
-
-            if len(kwargs.keys()) == 0:
-                kwargs = {
-                    "source": entity.get("source"),
-                    "target": result[0]["stream_target"],
-                    "tx_type": result[0]["tx_type"],
-                }
 
             entity["data"].update(
                 {
@@ -223,8 +199,32 @@ class DynamoDBAgency(Agency):
         if len(entities) == 0:
             return
 
-        kwargs.update({"entities": entities})
-        self.retrieve_entities_from_source(**kwargs)
+        result = list(
+            filter(
+                lambda x: x["table_name"] == table_name,
+                [
+                    dict(v, **{"tx_type": k})
+                    for k, v in self.setting["tgt_metadata"][
+                        entity.get("source")
+                    ].items()
+                ],
+            )
+        )
+        assert (
+            len(result) > 0
+        ), f"Cannot find the tx_type by the table_name ({table_name})!!!"
+
+        if result[0].get("stream_target") is None:
+            return
+
+        self.retrieve_entities_from_source(
+            **{
+                "source": entity.get("source"),
+                "target": result[0]["stream_target"],
+                "tx_type": result[0]["tx_type"],
+                "entities": entities,
+            }
+        )
 
     def tx_transactions_src(self, **kwargs):
         return kwargs.pop("entities")
