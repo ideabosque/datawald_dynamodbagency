@@ -13,6 +13,7 @@ from datawald_connector import DatawaldConnector
 from dynamodb_connector import DynamoDBConnector
 from silvaengine_utility import Utility
 from boto3.dynamodb.types import TypeDeserializer
+from pytz import timezone
 
 datetime_format = "%Y-%m-%dT%H:%M:%S%z"
 
@@ -106,7 +107,11 @@ class DynamoDBAgency(Agency):
                 )
                 created_at = created_at.strftime(datetime_format)
             else:
-                created_at = entity.get("created_at").strftime(datetime_format)
+                created_at = (
+                    entity.get("created_at")
+                    .replace(tzinfo=timezone("UTC"))
+                    .strftime(datetime_format)
+                )
 
             if isinstance(entity.get("updated_at"), str):
                 updated_at = datetime.strptime(
@@ -114,7 +119,11 @@ class DynamoDBAgency(Agency):
                 )
                 updated_at = updated_at.strftime(datetime_format)
             else:
-                updated_at = entity.get("updated_at").strftime(datetime_format)
+                updated_at = (
+                    entity.get("updated_at")
+                    .replace(tzinfo=timezone("UTC"))
+                    .strftime(datetime_format)
+                )
 
             _entity = {
                 "id": entity.get("tgt_id"),
