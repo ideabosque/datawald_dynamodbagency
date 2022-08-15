@@ -278,12 +278,12 @@ class DynamoDBAgency(Agency):
         try:
             if tx_type == "product":
                 metadatas = self.get_product_metadatas(**kwargs)
-                entity.update({"data": self.transform_data(raw_entity, metadatas)})
+                entity.update({"data": self.transform_data(raw_entity["data"], metadatas)})
             else:
                 entity.update(
                     {
                         "data": self.transform_data(
-                            raw_entity, self.map[target].get(tx_type)
+                            raw_entity["data"], self.map[target].get(tx_type)
                         )
                     }
                 )
