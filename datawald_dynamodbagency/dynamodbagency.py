@@ -26,6 +26,8 @@ class DynamoDBAgency(Agency):
         self.datawald = DatawaldConnector(logger, **setting)
         Agency.__init__(self, logger, datawald=self.datawald)
 
+        self.map = setting.get("TXMAP", {})
+
     def tx_entity_tgt(self, entity):
         tx_type = entity.get("tx_type_src_id").split("-")[0]
         table_name = self.setting["tgt_metadata"][entity.get("source")][tx_type][
