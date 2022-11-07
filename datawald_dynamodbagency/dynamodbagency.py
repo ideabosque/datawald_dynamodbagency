@@ -25,6 +25,8 @@ class DynamoDBAgency(Agency):
         self.dynamodbconnector = DynamoDBConnector(logger, **setting)
         self.datawald = DatawaldConnector(logger, **setting)
         Agency.__init__(self, logger, datawald=self.datawald)
+        if setting.get("tx_type"):
+            Agency.tx_type = setting.get("tx_type")
 
         self.map = setting.get("TXMAP", {})
 
