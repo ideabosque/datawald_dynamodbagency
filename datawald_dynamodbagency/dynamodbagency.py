@@ -227,15 +227,25 @@ class DynamoDBAgency(Agency):
 
         if result[0].get("stream_target") is None:
             return
-
-        self.retrieve_entities_from_source(
-            **{
-                "source": entity.get("source"),
-                "target": result[0]["stream_target"],
-                "tx_type": result[0]["tx_type"],
-                "entities": entities,
-            }
-        )
+        if isinstance(result[0].get("stream_target"), list):
+            for stream_target in result[0].get("stream_target", []):
+                self.retrieve_entities_from_source(
+                    **{
+                        "source": entity.get("source"),
+                        "target": stream_target,
+                        "tx_type": result[0]["tx_type"],
+                        "entities": entities,
+                    }
+                )
+        else:
+            self.retrieve_entities_from_source(
+                **{
+                    "source": entity.get("source"),
+                    "target": result[0]["stream_target"],
+                    "tx_type": result[0]["tx_type"],
+                    "entities": entities,
+                }
+            )
 
     def tx_entities_src(self, **kwargs):
         try:
