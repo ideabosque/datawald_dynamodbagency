@@ -212,42 +212,45 @@ class DynamoDBAgency(Agency):
         if len(entities) == 0:
             return
 
-        result = list(
-            filter(
-                lambda x: x["table_name"] == table_name,
-                [
-                    dict(v, **{"tx_type": k})
-                    for k, v in self.setting["tgt_metadata"][
-                        entity.get("source")
-                    ].items()
-                ],
+        for source in set(
+            [entity["source"] for entity in entities if entity.get("source")]
+        ):
+            result = list(
+                filter(
+                    lambda x: x["table_name"] == table_name,
+                    [
+                        dict(v, **{"tx_type": k})
+                        for k, v in self.setting["tgt_metadata"][source].items()
+                    ],
+                )
             )
-        )
-        assert (
-            len(result) > 0
-        ), f"Cannot find the tx_type by the table_name ({table_name})!!!"
+            assert (
+                len(result) > 0
+            ), f"Cannot find the tx_type by the table_name ({table_name})!!!"
 
-        if result[0].get("stream_target") is None:
-            return
-        if isinstance(result[0].get("stream_target"), list):
-            for stream_target in result[0].get("stream_target", []):
+            if result[0].get("stream_target") is None:
+                return
+
+            _entities = list(filter(lambda x: x["source"] == source, entities))
+            if isinstance(result[0].get("stream_target"), list):
+                for stream_target in result[0].get("stream_target", []):
+                    self.retrieve_entities_from_source(
+                        **{
+                            "source": source,
+                            "target": stream_target,
+                            "tx_type": result[0]["tx_type"],
+                            "entities": _entities,
+                        }
+                    )
+            else:
                 self.retrieve_entities_from_source(
                     **{
-                        "source": entity.get("source"),
-                        "target": stream_target,
+                        "source": source,
+                        "target": result[0]["stream_target"],
                         "tx_type": result[0]["tx_type"],
-                        "entities": entities,
+                        "entities": _entities,
                     }
                 )
-        else:
-            self.retrieve_entities_from_source(
-                **{
-                    "source": entity.get("source"),
-                    "target": result[0]["stream_target"],
-                    "tx_type": result[0]["tx_type"],
-                    "entities": entities,
-                }
-            )
 
     def tx_entities_src(self, **kwargs):
         try:
@@ -292,7 +295,9 @@ class DynamoDBAgency(Agency):
         try:
             if tx_type == "product":
                 metadatas = self.get_product_metadatas(**kwargs)
-                entity.update({"data": self.transform_data(raw_entity["data"], metadatas)})
+                entity.update(
+                    {"data": self.transform_data(raw_entity["data"], metadatas)}
+                )
             else:
                 entity.update(
                     {
