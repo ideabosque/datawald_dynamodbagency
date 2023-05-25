@@ -65,41 +65,8 @@ class DynamoDBAgency(Agency):
                     item["updated_at"],
                     item["data"],
                 )
-                # history = item.get("history", {})
-                # if len(history.keys()) > 9:
-                #     for key in sorted(history.keys(), reverse=True)[9:]:
-                #         history.pop(key)
 
-                # if tx_type == "inventorylot":
-                #     lots = [
-                #         lot
-                #         for lot in list(
-                #             map(
-                #                 lambda x: self.get_lot_history(
-                #                     x, item["data"]["inventorylots"]
-                #                 ),
-                #                 entity["data"]["inventorylots"],
-                #             )
-                #         )
-                #         if lot is not None
-                #     ]
-                #     if len(lots) > 0:
-                #         history.update({item["updated_at"]: lots})
-                #         new_entity.update({"history": history})
         return new_entity
-
-    # def get_lot_history(self, lot, lots):
-    #     _lots = list(
-    #         filter(lambda x: (x["inventoryNumber"] == lot["inventoryNumber"]), lots)
-    #     )
-    #     if len(_lots) > 0:
-    #         data_diff = DeepDiff(
-    #             Utility.json_loads(Utility.json_dumps(lot)),
-    #             Utility.json_loads(Utility.json_dumps(_lots[0])),
-    #         )
-    #         if data_diff != {}:
-    #             return _lots[0]
-    #     return None
 
     def insert_history_entity(self, tx_type, source, value, updated_at, data):
         self.dynamodbconnector.put_item(
@@ -154,8 +121,6 @@ class DynamoDBAgency(Agency):
                 "created_at": created_at,
                 "updated_at": updated_at,
             }
-            # if entity.get("history"):
-            #     _entity.update({"history": entity.pop("history")})
 
             self.dynamodbconnector.put_item(_entity, table_name=table_name)
             entity.update(
