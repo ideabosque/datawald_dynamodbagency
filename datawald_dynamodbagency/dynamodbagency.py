@@ -69,10 +69,12 @@ class DynamoDBAgency(Agency):
         return new_entity
 
     def insert_history_entity(self, tx_type, source, value, updated_at, data):
+        timestamp = datetime.timestamp(datetime.strptime(updated_at, datetime_format))
         self.dynamodbconnector.put_item(
             {
                 "tx_type_source": f"{tx_type}-{source}",
-                "value_updated_at": f"{value}_{updated_at}",
+                "value_timestamp": f"{value}_{int(timestamp)}",
+                "updated_at": updated_at,
                 "data": data,
             },
             table_name=self.setting["history_table"],
