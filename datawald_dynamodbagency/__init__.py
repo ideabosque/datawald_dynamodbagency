@@ -6,4 +6,4 @@ __author__ = "bibow"
 
 __all__ = ["datawald_dynamodbagency"]
 from .dynamodbagency import DynamoDBAgency
-from .dynamodbagent import DynamoDBAgent
+from .dynamodbagent import DynamoDBAgent, deploy
