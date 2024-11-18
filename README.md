@@ -1,4 +1,4 @@
-# `datawald_dynamodbagency`
+# Datawald DynamodbAgency
 
 The `datawald_dynamodbagency` module is a key component within the DataWald integration framework, providing advanced `dynamodb_connector` functionality to facilitate smooth data transformation and efficient data operations. It enables robust data retrieval and insertion processes, ensuring a streamlined and integrated data flow within DynamoDB.
 
